@@ -168,6 +168,7 @@ export const getProductosFamous = async (req, res) => {
   const productos2 = await Productos.aggregate([
     { $sort: { views: -1 } },
   ]).limit(Number(limit));
+  console.log({productos2})
   res.send(productos2);
 };
 export const getDetailProduct = async (req, res) => {

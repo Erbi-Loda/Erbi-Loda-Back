@@ -80,7 +80,7 @@ export const loginUser = async (req, res) => {
 export const getUser = async (req, res) => {
   const id = req.user._id;
   try {
-    const user = await User.findById(id);
+    const user = await User.findById(id).populate({path:"compras",populate:{path:"companyId"}}).populate({path:"historialInfinito"});
     if (!user) {
       return res.status(405).send("Usuario no encontrado");
     }
