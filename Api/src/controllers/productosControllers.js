@@ -5,6 +5,7 @@ import Compras from "../models/Compras.js";
 import ComprasCarrito from "../models/ComprasCarrito.js";
 import mercadopago from "mercadopago";
 import nodemailer from "nodemailer";
+import { sendEmail } from "../correos/mailer.js";
 
 mercadopago.configure({ access_token: process.env.ACCESSTOKENMERPA });
 export const pagoProducto = async (req, res) => {
@@ -17,7 +18,7 @@ export const pagoProducto = async (req, res) => {
         title: e.productoname,
         currency_id: "ARS",
         category_id: "art",
-        picture_url: e.img[0],
+        picture_url: typeof e.img ==='string'?e.img:e.img[0],
         description: e.description.slice(0, 256),
         unit_price: Number(e.price),
         quantity: e.quantity,
@@ -51,6 +52,48 @@ export const pagoProducto = async (req, res) => {
             });
           })
         );
+        
+        productos.map(async(kkk)=>{
+          
+          user.compras= user.compras.length?[...user.compras,
+          {
+            productoname:kkk.productoname,
+            price:kkk.price,
+            description:kkk.description,
+            shortDescription:kkk.shortDescription,
+            img:kkk.img[0],
+            views:kkk.views,
+            coments:kkk.coments,
+            score:kkk.score,
+            state:kkk.state,
+            stock:kkk.stock,
+            favorite:kkk.favorite,
+            companyId:kkk.companyId,
+            Product:kkk._id,
+            fecha:new Date()
+          }
+          ]
+           :[{
+            productoname:kkk.productoname,
+            price:kkk.price,
+            description:kkk.description,
+            shortDescription:kkk.shortDescription,
+            img:kkk.img,
+            views:kkk.views,
+            coments:kkk.coments,
+            score:kkk.score,
+            state:kkk.state,
+            stock:kkk.stock,
+            favorite:kkk.favorite,
+            companyId:kkk.companyId,
+            Product:kkk._id,
+            fecha:new Date()
+          }]
+          let productoStck =await Productos.findById(kkk._id)
+          productoStck.stock= Number(productoStck.stock)-1;
+          await productoStck.save()
+        })
+         await user.save()
         await ComprasCarrito.create({
           compras: arrayCompras.map((j) => j.id),
         });
@@ -110,7 +153,6 @@ export const postProducto = async (req, res) => {
 
 export const getProductos = async (req, res) => {
   const productos = await Productos.find();
-  console.log(productos);
   res.send(productos);
 };
 export const getProductosRandom = async (req, res) => {
@@ -126,38 +168,21 @@ export const getProductosFamous = async (req, res) => {
   const productos2 = await Productos.aggregate([
     { $sort: { views: -1 } },
   ]).limit(Number(limit));
+  console.log({productos2})
   res.send(productos2);
-  console.log("hola");
 };
 export const getDetailProduct = async (req, res) => {
   const producto = await Productos.findById(req.params.id);
   res.send(producto);
   const user = await User.findById(req.user._id);
-
+  
   //==========================================================
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    auth: { // XOauth2
-      user: process.env.EMAIL_ERBILODA,
-      pass: process.env.PASS_ERBILODA,
-    },
-  });
-
-  const mailOption = {
-    from: process.env.EMAIL_ERBILODA, // sender address
-    to: "alexiscoronel545@gmail.com", // list of receivers
-    subject: "Hello ✔", // Subject line
-    text: "Hello world?", // plain text body
-    html: "<h1 style='color:blue'>Hola alesi</h1>", // html body
-  };
-  let info = await transporter.sendMail(mailOption,(err,inf)=>{
-    if(err) console.log("Error>",err)
-    else{
-      console.log("Email Enviado.")
-    }
-  });
-  console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+  // sendEmail(
+  //   user.email,
+  //   "Este es el asundo.",
+  //   "deslogin",
+  //   `aqui tienes tu producto ${producto.title}`
+  // );
   //============================================================
 
   if (user) {
@@ -207,3 +232,12 @@ export const deleteProducto = async (req, res) => {
     return res.json({ msg: `Error - ${e}` });
   }
 };
+export const buscarProductos= async(req,res)=>{
+
+  let result2= await Productos.find({$text:{$search:req.query.busqueda}})
+  if(result2.length>0){
+
+   return res.json({busqueda:result2});
+  }
+  res.status(404).send("no encontrado")
+}

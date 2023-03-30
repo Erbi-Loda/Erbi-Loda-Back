@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const productosSchema = new mongoose.Schema({
     productoname: {
         type: String,
+        text: true,
         required: true,
     },
     price: {
@@ -48,7 +49,6 @@ shortDescription: {
     companyId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Company',
-        autopopulate: true
       }
 })
 export default mongoose.model('Productos', productosSchema)
